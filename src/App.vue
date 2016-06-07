@@ -1,18 +1,19 @@
 <template>
     <header>
-        <div id="logo"><a v-link="{name: 'home'}"><i class="fa fa-compass" aria-hidden="true"></i> welcome</a></div>
+        <div id="logo"><a v-link="{name: 'home'}"><i class="fa fa-compass" aria-hidden="true"></i> testVue</a></div>
         <nav>
             <ul>
-                <li><a v-link="{name: 'github' }">Github Repositories</a></li>
+                <li><a v-link="{name: 'github' }">GitHub Repo Search</a></li>
             </ul>
         </nav>
     </header>
     <main>
         <aside class="messages" v-if="messages.length > 0">
-            <div v-for="message in messages" v-bind:class="message.type">
-                <i class="close fa fa-times" aria-hidden="true" v-on:click="removeMessage($index)"></i>
-                {{ message.text }}
-            </div>        
+            <message
+                v-for="message in messages"
+                :message="message"
+                :index="$index">
+            </message>
         </aside>
         <router-view
             transition="opacify"
@@ -20,14 +21,21 @@
         </router-view>
     </main>
     <footer>
-        &copy;Aaron Hipple
+        &copy;2016 FootSteps Marketing
     </footer>
 </template>
 
 <script>
+import Message from './components/Message'
+
 export default {
+    components: {
+        Message
+    },
+
     data () {
         return {
+            'titleBase': 'testVue',
             'messages': []
         }
     },
@@ -41,7 +49,44 @@ export default {
         },
         removeMessage (index) {
             this.messages.splice(index, 1)
+        },
+        keyHandler (e) {
+            // Unmodified keypresses only below this block
+            if (e.altKey || e.ctrlKey || e.shiftKey) {
+                return
+            }
+
+            if (e.keyCode === 27) {
+                if (this.messages.length) {
+                    e.preventDefault()
+                    this.removeMessage(this.messages.length - 1)
+                }
+                return
+            }
+
+            // Arrow key navigation here
+            switch (e.keyCode) {
+            case 37: // left
+                e.preventDefault();
+                (this.page > 1) ? this.page-- : null
+                break
+            // case 38:
+            case 39: // right
+                e.preventDefault();
+                (this.page < this.pages) ? this.page++ : null
+                break
+            // case 40:
+            }
+            return
         }
+    },
+
+    ready () {
+        window.addEventListener('keyup', this.keyHandler)
+    },
+
+    destroyed () {
+        window.removeEventListener('keyup', this.keyHandler)
     }
 }
 </script>
@@ -139,33 +184,6 @@ main {
     padding: 1em 0;
     max-width: 30em;
     margin: auto;
-    div {
-        text-align: left;
-        margin-bottom: 0.5em;
-        &:last-child {
-            margin-bottom: 0;
-        }
-        position: relative;
-        .close {
-            display: block;
-            float: right;
-            font-size: 1.5em;
-            cursor: pointer;
-        }
-        padding: 0.5em;
-        border-radius: 0.5em;
-        font-size: 0.75em;
-        &.error {
-            background: #E69C9C;
-            border: 1px solid #EC4848;
-            color: #952424;
-        }
-        &.info {
-            background: #E6DF9C;
-            border: 1px solid #ECDC48;
-            color: #958A24;
-        }
-    }
 }
 
 footer {

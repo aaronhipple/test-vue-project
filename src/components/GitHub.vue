@@ -1,8 +1,20 @@
 <template>
     <div class="github">
-        <h1>GitHub Repositories</h1>
-        <input type="text" v-model="query" v-on:keyup.enter="queryForResults" placeholder="Enter your query to begin" debounce="500" />
-        <div class="results" v-if="results.length > 0">
+        <h1>GitHub Repo Search</h1>
+        <input id="githubSearch" type="text"
+            placeholder="Enter your query to begin"
+            v-model="query"
+            debounce="500" />
+
+        <pagination
+            :items.sync="results"
+            :page.sync="page"
+            :pages.sync="pages"
+            :per-page.sync="perPage">
+        </pagination>
+
+        <div class="results"
+            v-bind:class="{ 'loading': loading }">
             <git-hub-result
                 transition="blink"
                 transition-mode="out-in"
@@ -10,24 +22,20 @@
                 :result="result">
             </git-hub-result>
         </div>
-
-        <div class="pagination" v-if="pages > 1">
-            <ul>
-                <li v-for="n in pagesToShow()" v-on:click="changePage(n)" v-bind:class="{'active': isActive(n) }">{{ n }}</li>
-            </ul>
-        </div>
     </div>
 </template>
 
 <script>
 import GitHubResult from './GitHubResult'
+import Pagination from './Pagination'
 
 export default {
 
     name: 'GitHub',
 
     components: {
-        GitHubResult
+        GitHubResult,
+        Pagination
     },
 
     data () {
@@ -36,79 +44,26 @@ export default {
             page: 1,
             perPage: 15,
             pages: 0,
-            results: []
+            results: [],
+            loading: false,
+            title: 'GitHub Repository Search'
         }
     },
 
     methods: {
-        pagesToShow () {
-            var toShow = 10
-            var n = this.page - 5
-            var items = []
-
-            if (n < 1) {
-                n = 1
-            }
-            if (n > this.pages - 5) {
-                n = n - 5
-            }
-
-            for (var i = n; i < n + toShow; i++) {
-                if (i > 0 && i <= this.pages) {
-                    items.push(i)
-                }
-            }
-
-            if (this.page > 1) {
-                items.unshift('<')
-            }
-            if (this.page > 2) {
-                items.unshift('«')
-            }
-            if (this.page < this.pages) {
-                items.push('>')
-            }
-            if (this.page < this.pages - 1) {
-                items.push('»')
-            }
-
-            return items
-        },
-        isActive (n) {
-            if (this.query.trim() === '') {
-                return false
-            }
-            return n === this.page
-        },
-        changePage (n) {
-            if (n === '>') {
-                (this.page < this.pages) ? this.page++ : null
-            } else if (n === '<') {
-                (this.page > 1) ? this.page-- : null
-            } else if (n === '»') {
-                this.page = this.pages
-            } else if (n === '«') {
-                this.page = 1
-            } else {
-                this.page = n
-            }
-            this.$router.go({
-                name: 'github.query.paged',
-                params: {
-                    page: this.page,
-                    query: this.query
-                }
-            })
-        },
         queryForResults () {
+            this.results = []
+
             if (this.query === '') {
-                this.results = []
                 this.pages = 0
                 this.page = 1
                 return
             }
 
+            this.$set('loading', true)
+
             this.$http({url: 'https://api.github.com/search/repositories?page=' + this.page + '&per_page=' + this.perPage + '&q=' + encodeURIComponent(this.query), method: 'GET'}).then(function (response) {
+                this.$set('loading', false)
                 if (response.data.total_count > 1000) {
                     this.pages = Math.ceil(1000 / this.perPage)
                 } else {
@@ -122,6 +77,7 @@ export default {
                     this.$parent.addMessage('info', 'No results found for ' + this.query)
                 }
             }, function (response) {
+                this.$set('loading', false)
                 console.log(response)
                 this.$set('results', [])
                 var message = response.statusText + ' (' + response.status + '): '
@@ -131,19 +87,45 @@ export default {
                 }
                 this.$parent.addMessage('error', message)
             })
+        },
+        keyHandler (e) {
+            // Search (ctrl+alt+f)
+            if (!e.shiftKey && e.altKey && e.ctrlKey && e.keyCode === 70) {
+                e.preventDefault()
+                document.getElementById('githubSearch').focus()
+                document.getElementById('githubSearch').select()
+                return
+            }
         }
     },
 
     watch: {
         query (newVal, oldVal) {
+            if (newVal !== oldVal) {
+                this.$set('page', 1)
+                this.$set('pages', 0)
+                this.$set('results', [])
+            }
+
             if (newVal.trim() === '') {
-                this.$router.go({name: 'github'})
+                this.$router.go({
+                    name: 'github'
+                })
                 return
             }
 
             this.$router.go({
                 name: 'github.query',
                 params: {
+                    query: this.query
+                }
+            })
+        },
+        page (newVal, oldVal) {
+            this.$router.go({
+                name: 'github.query.paged',
+                params: {
+                    page: newVal,
                     query: this.query
                 }
             })
@@ -159,11 +141,20 @@ export default {
                 if (to.params.page) {
                     this.$set('page', parseInt(to.params.page))
                 }
-                this.$set('query', to.params.query)
-                this.queryForResults()
             }
+            this.$set('query', to.params.query)
+            this.queryForResults()
         }
+    },
+
+    ready () {
+        window.addEventListener('keyup', this.keyHandler)
+    },
+
+    destroyed () {
+        window.removeEventListener('keyup', this.keyHandler)
     }
+
 }
 </script>
 
@@ -181,37 +172,28 @@ input[type=text] {
 }
 
 .results {
-    transition: all 1s ease-in-out;
+    transition: all 100ms ease;
+    min-height: 20vh;
+    border-radius: 0.5em;
+    background: rgba(0,0,0,0.0);
+    box-shadow: 0 0 0.5em 0.5em rgba(0,0,0,0.0);
+    &.loading {
+        min-height: 50vh;
+        background: rgba(0,0,0,0.066);
+        box-shadow: 0 0 0.5em 0.5em rgba(0,0,0,0.066);
+    }
+    width: 100%;
     margin: 1em auto;
     text-align: left;
 }
 
 .blink-transition {
-    transition: opacity 50ms ease;
+    transition: opacity 300ms ease;
     opacity: 1;
 }
 
 .blink-enter, .blink-leave {
     opacity: 0;
-}
-
-.pagination {
-    ul {
-        list-style-type: none;
-        padding: 0;
-    }
-    li {
-        display: inline-block;
-        margin: 0 0.25em;
-        min-width: 2em;
-        min-height: 2em;
-        line-height: 2em;
-        cursor: pointer;
-        &.active {
-            background: #ddc;
-            border-radius: 3em;
-        }
-    }
 }
 
 </style>
