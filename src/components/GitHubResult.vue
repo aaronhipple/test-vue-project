@@ -1,13 +1,27 @@
 <template>
     <div class="result">
         <a v-bind:href="result.owner.url">
-            <img v-bind:src="result.owner.avatar_url" v-bind:alt="result.owner.login" class="result-avatar">
+            <img class="result-avatar"
+                v-bind:src="result.owner.avatar_url"
+                v-bind:alt="result.owner.login">
         </a>
         <h3 class="result-title">
-            <a v-bind:href="result.url" v-text="result.full_name" v-text="result.full_name"></a>
-            <small class="result-homepage" v-if="result.homepage"><a v-bind:href="result.homepage" v-text="result.homepage"></a></small>
+            <a
+                v-bind:href="result.url"
+                v-text="result.full_name">
+            </a>
+            <small class="result-homepage"
+                v-if="result.homepage">
+                <a
+                    v-bind:href="result.homepage"
+                    v-text="result.homepage">
+                </a>
+            </small>
         </h3>
-        <div class="result-description" v-if="result.description" v-text="result.description"></div>
+        <div class="result-description"
+            v-if="result.description"
+            v-text="result.description">
+        </div>
     </div>
 </template>
 
