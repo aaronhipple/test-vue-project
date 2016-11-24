@@ -1,6 +1,6 @@
 # test-vue-project
 
-> A Vue.js project
+> A Vue.js learning project. Searches GitHub repos, does routing and pagination.
 
 ## Build Setup
 
